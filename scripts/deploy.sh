@@ -85,17 +85,24 @@ sudo -u "$SERVICE_USER" "$DEST_VENV/bin/pip" install -r "$DEST_CODE/requirements
 # 10. Despliegue de Configuración y Servicios
 echo "[8/9] Copiando archivos de Configuración y Systemd..."
 
-# 11. Copia todos los archivos de configuración (YAML, .dev, .prod, .example, .json)
-sudo install -D -m 0640 -o root -g "$SERVICE_USER" \
-    "$REPO_ROOT/config/settings.yaml" "$DEST_ETC/settings.yaml"
-sudo install -D -m 0640 -o root -g "$SERVICE_USER" \
-    "$REPO_ROOT/config/.env.dev" "$DEST_ETC/.env.dev"
-sudo install -D -m 0640 -o root -g "$SERVICE_USER" \
-    "$REPO_ROOT/config/.env.prod" "$DEST_ETC/.env.prod"
-sudo install -D -m 0640 -o root -g "$SERVICE_USER" \
-    "$REPO_ROOT/config/.env.example" "$DEST_ETC/.env.example"
+# 11. Copia archivos de configuración (YAML, .envs, cookies) si existen
+copy_config() {
+    local src="$1"
+    local dst="$2"
+    if [ -f "$src" ]; then
+        sudo install -D -m 0640 -o root -g "$SERVICE_USER" "$src" "$dst"
+        echo "    -> Copiado $(basename "$src")"
+    else
+        echo "    -> Saltando $(basename "$src") (no existe en el repo)"
+    fi
+}
+
+copy_config "$REPO_ROOT/config/settings.yaml" "$DEST_ETC/settings.yaml"
+copy_config "$REPO_ROOT/config/.env.dev" "$DEST_ETC/.env.dev"
+copy_config "$REPO_ROOT/config/.env.prod" "$DEST_ETC/.env.prod"
+copy_config "$REPO_ROOT/config/.env.example" "$DEST_ETC/.env.example"
 find "$REPO_ROOT/config" -name "*.json" -exec sudo install -D -m 0640 -o root -g "$SERVICE_USER" {} "$DEST_ETC/" \;
-echo "    -> Archivos de configuración de entorno copiados."
+echo "    -> Archivos de configuración copiados (los ausentes se ignoraron)."
 
 # 12. Maneja el archivo de SECRETOS (.env)
 ENV_FILE="$DEST_ETC/.env"
