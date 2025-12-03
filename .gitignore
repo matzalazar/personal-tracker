@@ -28,7 +28,8 @@ dist/
 build/
 
 # Salidas locales del proyecto
-data/
+data/*
+!data/.gitkeep
 logs/
 *.log
 
