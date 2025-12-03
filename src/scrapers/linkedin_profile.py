@@ -59,6 +59,7 @@ class LinkedInProfileScraper(BaseScraper):
         self.driver: Optional[webdriver.Chrome] = None
         self.login_url = "https://www.linkedin.com/login"
         self.timeout = self.config.get_int("linkedin.timeout", 60)
+        self.wait_timeout = self.config.get_int("linkedin.wait_timeout", 20)
 
     def _is_arm_architecture(self) -> bool:
         """Detecta si estamos en Raspberry Pi / ARM."""
@@ -178,15 +179,25 @@ class LinkedInProfileScraper(BaseScraper):
                 return 
             raise RuntimeError(f"Fallo en login: {e}")
 
-    def _get_soup(self, url: str) -> BeautifulSoup:
-        """Navegación y espera visual (Lógica Original)."""
+    def _get_soup(self, url: str, wait_selector: Optional[Tuple[str, str]] = None, wait_time: Optional[int] = None) -> BeautifulSoup:
+        """Navegación y espera visual con tolerancia a timeouts."""
         self.logger.info(f"Navegando a: {url}")
-        self.driver.get(url)
+        wait_selector = wait_selector or (By.CSS_SELECTOR, ".pvs-list, #profile-content, .artdeco-card, footer")
+        wait_time = wait_time or self.wait_timeout
+
+        try:
+            self.driver.get(url)
+        except TimeoutException:
+            self.logger.warning(f"Timeout de carga en {url}, usando HTML parcial...")
+            try:
+                self.driver.execute_script("window.stop();")
+            except Exception:
+                pass
         
         try:
             # Espera genérica a que cargue algo de contenido
-            WebDriverWait(self.driver, 15).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".pvs-list, #profile-content, .artdeco-card, footer"))
+            WebDriverWait(self.driver, wait_time).until(
+                EC.presence_of_element_located(wait_selector)
             )
             self.driver.execute_script("window.scrollTo(0, document.body.scrollHeight / 2);")
             time.sleep(2) 
@@ -196,45 +207,51 @@ class LinkedInProfileScraper(BaseScraper):
 
         return BeautifulSoup(self.driver.page_source, "html.parser")
 
-    def _parse_about(self) -> str:
-        """Extrae el texto de la sección 'Acerca de' usando selectores más robustos."""
-        try:
-            soup = self._get_soup(self.profile_url)
-            
-            # 1. Ubicar la sección por el ancla invisible id="about"
-            about_anchor = soup.find("div", {"id": "about"})
-            if not about_anchor:
-                return ""
-
-            # 2. Subir al contenedor de la sección (section)
-            section = about_anchor.find_parent("section")
-            if not section:
-                return ""
-
-            # 3. Buscar el contenedor de texto específico
-            # LinkedIn suele usar 'inline-show-more-text' para bloques de texto largos.
-            # Buscamos cualquier div o span que contenga esa clase.
-            text_container = section.find(lambda tag: tag.name in ["div", "span"] and 
-                                          tag.get("class") and 
-                                          any("inline-show-more-text" in c for c in tag.get("class")))
-
-            if text_container:
-                # Preferimos el span visualmente oculto si existe
-                hidden_span = text_container.find("span", class_="visually-hidden")
-                if hidden_span:
-                    return hidden_span.get_text(" ", strip=True)
-                
-                # Si no, tomamos el texto visible (que podría estar truncado si no hicimos click en 'ver más',
-                # pero a veces LinkedIn carga todo el texto en el DOM aunque visualmente lo corte con CSS).
-                visible_span = text_container.find("span", {"aria-hidden": "true"})
-                if visible_span:
-                    return visible_span.get_text(" ", strip=True)
-                
-                # Fallback: texto plano del contenedor
-                return text_container.get_text(" ", strip=True)
-
+    def _extract_about_from_soup(self, soup: BeautifulSoup) -> str:
+        """Extrae About desde un soup ya cargado."""
+        about_anchor = soup.find("div", {"id": "about"})
+        if not about_anchor:
             return ""
 
+        section = about_anchor.find_parent("section")
+        if not section:
+            return ""
+
+        text_container = section.find(
+            lambda tag: tag.name in ["div", "span"]
+            and tag.get("class")
+            and any("inline-show-more-text" in c for c in tag.get("class"))
+        )
+
+        if text_container:
+            hidden_span = text_container.find("span", class_="visually-hidden")
+            if hidden_span:
+                return hidden_span.get_text(" ", strip=True)
+            
+            visible_span = text_container.find("span", {"aria-hidden": "true"})
+            if visible_span:
+                return visible_span.get_text(" ", strip=True)
+            
+            return text_container.get_text(" ", strip=True)
+
+        return ""
+
+    def _parse_about(self) -> str:
+        """Extrae el texto de la sección 'Acerca de' con fallback."""
+        try:
+            soup = self._get_soup(self.profile_url, wait_time=self.config.get_int("linkedin.about_wait", self.wait_timeout + 10))
+            about_text = self._extract_about_from_soup(soup)
+            if about_text:
+                return about_text
+
+            # Fallback a página más ligera de detalles/about
+            about_details_url = f"{self.profile_url}/details/about/"
+            soup = self._get_soup(
+                about_details_url,
+                wait_selector=(By.CSS_SELECTOR, ".pvs-list, .artdeco-card"),
+                wait_time=self.config.get_int("linkedin.about_wait", self.wait_timeout + 10),
+            )
+            return self._extract_about_from_soup(soup)
         except Exception as e:
             self.logger.warning(f"No se pudo extraer About: {e}")
             return ""
