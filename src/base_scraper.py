@@ -47,12 +47,15 @@ class BaseScraper(ABC):
         self.logger = logging.getLogger(scraper_name)
         
         # Configura el directorio de salida (ej. 'data/coursera/')
-        default_outdir = (
-            f"/var/lib/personal-track/{self.scraper_name}"
-            if self.env_name == "prod"
-            else f"data/{self.scraper_name}"
-        )
-        self.outdir = Path(self.config.get(f"{scraper_name}.outdir", default_outdir))
+        default_outdir = f"data/{self.scraper_name}"
+        outdir_str = self.config.get(f"{scraper_name}.outdir", default_outdir)
+        outdir_path = Path(outdir_str)
+
+        # En prod, si la ruta es relativa, anclarla a /var/lib/personal-track
+        if self.env_name == "prod" and not outdir_path.is_absolute():
+            outdir_path = Path("/var/lib/personal-track") / outdir_path
+
+        self.outdir = outdir_path
         self.outdir.mkdir(parents=True, exist_ok=True)
         
         # Configuración común (usando helpers de Config para consistencia)
