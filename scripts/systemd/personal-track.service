@@ -1,0 +1,27 @@
+[Unit]
+Description=Ejecutar todos los scrapers de personal-track
+Wants=personal-track.timer
+
+[Service]
+Type=oneshot
+User=track
+Group=track
+EnvironmentFile=/etc/personal-track/.env
+WorkingDirectory=/opt/personal-track
+
+# [CORRECCIÓN] Añadimos "--env prod -s all" para que use la config de producción
+ExecStart=/opt/personal-track/.venv/bin/python3 /opt/personal-track/main.py --env prod -s all
+
+StandardOutput=append:/var/log/personal-track/personal_sync.log
+StandardError=append:/var/log/personal-track/personal_sync.log
+
+# Hardening (Aislamiento de Seguridad)
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/var/lib/personal-track /var/log/personal-track
+ReadOnlyPaths=/etc/personal-track
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

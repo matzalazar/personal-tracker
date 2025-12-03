@@ -1,0 +1,10 @@
+[Unit]
+Description=Disparador diario para el servicio personal-track
+
+[Timer]
+# Ejemplo: Ejecutar todos los días a las 4:05 AM
+OnCalendar=*-*-* 04:05:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target

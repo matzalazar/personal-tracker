@@ -1,0 +1,79 @@
+# config/settings.yaml
+
+# ================================
+# Configuración General
+# ================================
+general:
+  log_level: INFO                        # DEBUG | INFO | WARNING | ERROR
+  timezone: America/Argentina/Buenos_Aires
+  headless_default: false                 # fallback para scrapers sin config específica
+  timeout_seconds: 25
+
+# ================================
+# Coursera - Progreso de Cursos
+# ================================
+coursera:
+  enabled: true
+  frequency: daily                              # daily | weekly | manual
+  outdir: data/coursera                         # override con COURSERA_OUTDIR
+  headless: true                                # override con HEADLESS
+  puzzle_max_wait: 300                          # override con PUZZLE_MAX_WAIT
+  cookies_file: config/coursera_cookies.json    # override con COURSERA_COOKIES_FILE
+  # Credenciales via .env: COURSERA_EMAIL, COURSERA_PASSWORD
+
+# ================================
+# Goodreads - Progreso de Lectura
+# ================================
+goodreads:
+  enabled: true
+  frequency: daily
+  outdir: data/goodreads                 # override con GOODREADS_OUTDIR
+  shelf: currently-reading               # shelf a monitorear
+  per_page: 100                          # override con GOODREADS_PER_PAGE
+  # Configuración via .env: GOODREADS_PROFILE_URL o GOODREADS_USERNAME
+
+# ================================
+# UPSO - Plan de Estudios
+# ================================
+upso:
+  enabled: true
+  frequency: daily
+  outdir: data/upso                                         # override con UPSO_OUTDIR
+  headless: true                                            # override con HEADLESS
+  puzzle_max_wait: 120                                      # override con PUZZLE_MAX_WAIT
+  plan_url: https://guarani3w.upso.edu.ar/guarani3w/plan    # override con UPSO_PLAN_URL
+  # Credenciales via .env: UPSO_USUARIO, UPSO_CLAVE
+
+# ================================
+# GitHub - Actividad Diaria
+# ================================
+github_daily:
+  enabled: true
+  frequency: daily
+  outdir: data/github_daily              # override con GITHUB_DAILY_OUTDIR
+  per_page: 100                          # override con GITHUB_PER_PAGE
+  visibility: all                        # all | public | private (override con GITHUB_VISIBILITY)
+  author_login: ""                       # override con GITHUB_AUTHOR_LOGIN
+  author_emails: ""                      # override con GITHUB_AUTHOR_EMAILS (lista separada por comas)
+  # Token via .env: GITHUB_TOKEN
+
+# ================================
+# Linkedin - CV
+# ================================
+linkedin:
+  enabled: true
+  frequency: daily
+  outdir: data/linkedin                  # Fallback relativo (será overrideado por .env)
+  headless: true
+  timeout: 90
+  puzzle_max_wait: 300
+  cookies_file: config/linkedin_cookies.json
+  profile_url: ""
+
+# ================================
+# Configuración de Exportación
+# ================================
+export:
+  enabled: false
+  compress: false                        # comprimir archivos antiguos
+  retention_days: 30                     # mantener datos por X días
