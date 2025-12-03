@@ -41,13 +41,18 @@ class BaseScraper(ABC):
         """
         self.config_dir = config_dir
         self.scraper_name = scraper_name
-
+        self.env_name = env_name
         # Carga la configuración unificada
         self.config = Config(config_dir, env_name=env_name)
         self.logger = logging.getLogger(scraper_name)
         
         # Configura el directorio de salida (ej. 'data/coursera/')
-        self.outdir = Path(self.config.get(f"{scraper_name}.outdir", f"data/{self.scraper_name}"))
+        default_outdir = (
+            f"/var/lib/personal-track/{self.scraper_name}"
+            if self.env_name == "prod"
+            else f"data/{self.scraper_name}"
+        )
+        self.outdir = Path(self.config.get(f"{scraper_name}.outdir", default_outdir))
         self.outdir.mkdir(parents=True, exist_ok=True)
         
         # Configuración común (usando helpers de Config para consistencia)
