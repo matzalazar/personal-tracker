@@ -43,21 +43,19 @@ def setup_logging(level: int = logging.INFO, log_file: str | Path = "data/person
     Configura el logging global (principal) para la consola y un archivo.
     """
     log_file = Path(log_file)
+    handlers: List[logging.Handler] = [logging.StreamHandler()]
     try:
         log_file.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        handlers.append(logging.FileHandler(log_file, encoding='utf-8'))
     except PermissionError:
         print(f"[ERROR] No se pudo crear/escribir en {log_file}. "
-              f"Verifica permisos o la ruta de log para el entorno '{ENV_NAME}'.")
-        file_handler = logging.StreamHandler()
-    
+              f"Verifica permisos o la ruta de log para el entorno '{ENV_NAME}'. "
+              "Continuando con logs solo en consola.")
+
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.StreamHandler(),
-            file_handler
-        ],
+        handlers=handlers,
         force=True
     )
 

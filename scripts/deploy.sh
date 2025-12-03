@@ -57,6 +57,9 @@ sudo chown -R "$SERVICE_USER":"$SERVICE_USER" "$DEST_VAR" "$DEST_LOG"
 sudo chown root:"$SERVICE_USER" "$DEST_ETC"
 sudo chmod 0750 "$DEST_CODE" "$DEST_VAR" "$DEST_VAR/data" "$DEST_LOG" "$DEST_VAR/chromium_data_coursera" "$DEST_VAR/chromium_data_upso" "$DEST_VAR/chromium_data_linkedin"
 sudo chmod 0750 "$DEST_ETC"
+# Crear archivos de log vacíos con permisos para track
+sudo install -D -m 0640 -o "$SERVICE_USER" -g "$SERVICE_USER" /dev/null "$DEST_LOG/personal_sync.log"
+sudo install -D -m 0640 -o "$SERVICE_USER" -g "$SERVICE_USER" /dev/null "$DEST_LOG/scrapers_success.log"
 
 # 7. Despliegue de Código (rsync)
 echo "[5/9] Copiando código fuente con rsync (El código es la fuente de verdad)..."
